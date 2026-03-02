@@ -34,6 +34,9 @@ document.addEventListener("DOMContentLoaded", () => {
     technology: { label: "Technology", color: "#e8eaf6", textColor: "#3949ab" },
   };
 
+  // School name used in sharing messages
+  const SCHOOL_NAME = "Mergington High School";
+
   // State for activities and filters
   let allActivities = {};
   let currentFilter = "all";
@@ -568,6 +571,17 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         `
         }
+        <div class="share-container">
+          <button class="share-button" data-activity="${name}" aria-label="Share this activity">
+            <span>&#x1F4E4;</span> Share
+          </button>
+          <div class="share-dropdown hidden">
+            <a class="share-option" data-platform="twitter" href="#" role="button">𝕏 / Twitter</a>
+            <a class="share-option" data-platform="facebook" href="#" role="button">Facebook</a>
+            <a class="share-option" data-platform="whatsapp" href="#" role="button">WhatsApp</a>
+            <a class="share-option" data-platform="copy" href="#" role="button">📋 Copy Link</a>
+          </div>
+        </div>
       </div>
     `;
 
@@ -587,8 +601,74 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    // Add share button handler
+    const shareButton = activityCard.querySelector(".share-button");
+    const shareDropdown = activityCard.querySelector(".share-dropdown");
+
+    shareButton.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      const shareUrl = window.location.href;
+      const shareTitle = `Check out ${name} at ${SCHOOL_NAME}!`;
+      const shareText = `${details.description} — Schedule: ${formatSchedule(details)}`;
+
+      // Use native Web Share API if available (mobile/modern browsers)
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: shareTitle, text: shareText, url: shareUrl });
+          return;
+        } catch (err) {
+          // User cancelled or share failed — fall through to dropdown
+          if (err.name === "AbortError") return;
+        }
+      }
+
+      // Fallback: toggle dropdown
+      shareDropdown.classList.toggle("hidden");
+    });
+
+    // Share option handlers
+    const shareOptions = activityCard.querySelectorAll(".share-option");
+    shareOptions.forEach((option) => {
+      option.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const platform = option.dataset.platform;
+        const shareUrl = encodeURIComponent(window.location.href);
+        const shareText = encodeURIComponent(`Check out ${name} at ${SCHOOL_NAME}! ${details.description}`);
+
+        let targetUrl = null;
+        if (platform === "twitter") {
+          targetUrl = `https://twitter.com/intent/tweet?text=${shareText}&url=${shareUrl}`;
+        } else if (platform === "facebook") {
+          targetUrl = `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`;
+        } else if (platform === "whatsapp") {
+          targetUrl = `https://api.whatsapp.com/send?text=${shareText}%20${shareUrl}`;
+        } else if (platform === "copy") {
+          navigator.clipboard.writeText(window.location.href).then(() => {
+            showMessage("Link copied to clipboard!", "success");
+          }).catch(() => {
+            showMessage("Could not copy link.", "error");
+          });
+          shareDropdown.classList.add("hidden");
+          return;
+        }
+
+        if (targetUrl) {
+          window.open(targetUrl, "_blank", "noopener,noreferrer");
+        }
+        shareDropdown.classList.add("hidden");
+      });
+    });
+
     activitiesList.appendChild(activityCard);
   }
+
+  // Close any open share dropdown when clicking outside
+  document.addEventListener("click", () => {
+    document.querySelectorAll(".share-dropdown:not(.hidden)").forEach((dropdown) => {
+      dropdown.classList.add("hidden");
+    });
+  });
 
   // Event listeners for search and filter
   searchInput.addEventListener("input", (event) => {
