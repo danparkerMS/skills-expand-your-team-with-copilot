@@ -183,13 +183,6 @@ section h3 {
   line-height: 1.4;
 }
 
-.activity-card-actions {
-  margin-top: auto;
-  padding-top: 10px;
-  display: flex;
-  justify-content: center;
-}
-
 /* Activity Tag */
 .activity-tag {
   position: absolute;
